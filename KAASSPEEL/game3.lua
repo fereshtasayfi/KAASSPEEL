@@ -40,6 +40,16 @@ ground.alpha = 0.1
 ground.myName = "ground"
 physics.addBody(ground, "static", { friction = 1.0, bounce = 0.0 })
 
+local knop = display.newImageRect(uiGroup, 'fotos/menuW.png', 75,75)
+knop.anchorX = 1
+knop.anchorY = 0
+knop.x = W
+knop.y = -50
+local function goToMenu()
+  composer.gotoScene("menu", { effect="slideLeft", time=400 })
+end                  
+knop:addEventListener("tap", goToMenu)
+
 --speler
 local rat
 local function makeRat()
