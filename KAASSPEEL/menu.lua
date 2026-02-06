@@ -64,7 +64,7 @@ function scene:create(event)
 
     local startBtn2 = display.newText(
         sceneGroup,
-        "Whack a chees",
+        "Whack a cheese",
         display.contentCenterX,
         display.contentCenterY + 60,
         native.systemFont,
