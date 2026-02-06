@@ -1,6 +1,6 @@
 display.setStatusBar(display.HiddenStatusBar)
 math.randomseed(os.time())
---chees movement
+
 local composer = require("composer")
 local scene = composer.newScene()
 
@@ -24,8 +24,6 @@ local maxScoreText
 local mole
 local maxScore = loadMaxScore()
 local a = 1/6
-local b = 3/6
-local c = 1
 local d = 1/2
 local H = display.contentHeight
 local W = display.contentWidth
@@ -33,7 +31,9 @@ local W = display.contentWidth
 local gameTime = 30
 local timeLeft = gameTime
 local timeText
-local countdownTimer   -- ← правильна назва, без опечаток!
+local countdownTimer
+
+local moleMoveTimer
 
 local function saveMaxScore(value)
     local path = system.pathForFile(saveFile, system.DocumentsDirectory)
@@ -45,7 +45,7 @@ local function saveMaxScore(value)
 end
 
 function scene:create(event)
-    local sceneGroup = self.view  
+    local sceneGroup = self.view
 
     local bg = display.newImageRect(sceneGroup, "fotos/content.png", display.actualContentWidth, display.actualContentHeight)
     bg.x = display.contentCenterX
@@ -54,8 +54,8 @@ function scene:create(event)
     local knop = display.newImageRect(sceneGroup, "fotos/menu.png", 75, 75)
     knop.anchorX = 1
     knop.anchorY = 0
-    knop.x = W
-    knop.y = -50                  
+    knop.x = W - 10
+    knop.y = 10
     knop:addEventListener("tap", function()
         composer.gotoScene("menu", { effect="slideLeft", time=400 })
     end)
@@ -64,7 +64,7 @@ function scene:create(event)
         parent = sceneGroup,
         text = "Score: 0",
         x = d*W,
-        y = 0,
+        y = 25,
         font = native.systemFont,
         fontSize = 30
     })
@@ -76,7 +76,7 @@ function scene:create(event)
         parent = sceneGroup,
         text = "Max: " .. maxScore,
         x = a*W,
-        y = 0,
+        y = 25,
         font = native.systemFont,
         fontSize = 15
     })
@@ -86,7 +86,7 @@ function scene:create(event)
         parent = sceneGroup,
         text = "Time: " .. gameTime,
         x = display.contentCenterX,
-        y = 60,
+        y = 70,
         font = native.systemFontBold,
         fontSize = 36
     })
@@ -98,16 +98,13 @@ local function updateCountdown()
     timeText.text = "Time: " .. timeLeft
 
     if timeLeft <= 0 then
-        timer.cancel(countdownTimer)
-        countdownTimer = nil
+        if countdownTimer then timer.cancel(countdownTimer); countdownTimer=nil end
+        if moleMoveTimer then timer.cancel(moleMoveTimer); moleMoveTimer=nil end
 
         composer.setVariable("currentScore", currentScore)
         composer.setVariable("maxScore", maxScore)
 
-        composer.gotoScene("gameover", {
-            time = 600,
-            effect = "fade"
-        })
+        composer.gotoScene("gameover", { time = 600, effect = "fade" })
     end
 end
 
@@ -121,8 +118,10 @@ end
 local function spawnMole()
     removeMole()
 
+    if not gameActive then return end
+
     local x = math.random(50, display.contentWidth - 50)
-    local y = math.random(100, display.contentHeight - 100)
+    local y = math.random(120, display.contentHeight - 120)
 
     local sceneGroup = scene.view
 
@@ -131,27 +130,32 @@ local function spawnMole()
     mole.y = y
 
     mole:addEventListener("touch", function(event)
-        if event.phase ~= "began" then return false end   
+        if event.phase ~= "began" then return false end
+        if not gameActive then return true end
 
         currentScore = currentScore + 1
         scoreText.text = "Score: " .. currentScore
-        
+
         if currentScore > maxScore then
             maxScore = currentScore
             maxScoreText.text = "Max: " .. maxScore
             saveMaxScore(maxScore)
         end
 
-        removeMole()
         spawnMole()
-
         return true
     end)
 end
 
+local function moveMole()
+    if not gameActive then return end
+    if not mole then return end
+    spawnMole()
+end
+
 function scene:show(event)
     if event.phase == "did" then
-        currentScore = 0 
+        currentScore = 0
         scoreText.text = "Score: 0"
         timeLeft = gameTime
         timeText.text = "Time: " .. gameTime
@@ -159,16 +163,27 @@ function scene:show(event)
 
         spawnMole()
 
-        -- Запускаємо таймер — тепер правильно
+        if countdownTimer then timer.cancel(countdownTimer) end
         countdownTimer = timer.performWithDelay(1000, updateCountdown, gameTime)
+
+        if moleMoveTimer then timer.cancel(moleMoveTimer) end
+        moleMoveTimer = timer.performWithDelay(1500, moveMole, 0)
     end
 end
 
 function scene:hide(event)
     if event.phase == "will" then
+        gameActive = false
+        removeMole()
+
         if countdownTimer then
             timer.cancel(countdownTimer)
             countdownTimer = nil
+        end
+
+        if moleMoveTimer then
+            timer.cancel(moleMoveTimer)
+            moleMoveTimer = nil
         end
     end
 end
